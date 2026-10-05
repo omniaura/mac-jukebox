@@ -144,6 +144,8 @@ jobs:
           [ "$SIGNED" = "true" ] || flags+=(--prerelease --notes "Unsigned (ad-hoc) build; not for the Homebrew cask.")
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "build/Jukebox-${VERSION}.zip" --clobber
+            # A signed re-run promotes an earlier ad-hoc prerelease of the same tag.
+            if [ "$SIGNED" = "true" ]; then gh release edit "$TAG" --prerelease=false --latest; fi
           else
             gh release create "$TAG" "build/Jukebox-${VERSION}.zip" --title "$TAG" "${flags[@]}"
           fi
