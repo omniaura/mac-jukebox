@@ -15,7 +15,7 @@ final class Handler {
         case "cue":
             let dedupe = r.opts["dedupe"] != "0"
             var paths = Library.collect(r.args, dedupe: dedupe)
-            guard !paths.isEmpty else { return fail("no playable audio found in: \(r.args.joined(separator: ", "))") }
+            guard !paths.isEmpty else { return fail(noAudioMessage(r.args)) }
             if dedupe {
                 let queued = engine.upcomingPaths
                 paths.removeAll { queued.contains($0) }
@@ -67,6 +67,20 @@ final class Handler {
         case "quit": quit(); return ok("bye")
         default: return fail("unknown command '\(r.cmd)'")
         }
+    }
+
+    /// Distinguishes "nothing there" from "macOS will not let this app look", which happens
+    /// on external drives until the Removable Volumes permission is granted.
+    func noAudioMessage(_ inputs: [String]) -> String {
+        for input in inputs {
+            do { _ = try FileManager.default.contentsOfDirectory(atPath: input) } catch let error as NSError {
+                let denied = error.code == NSFileReadNoPermissionError || (error.userInfo[NSUnderlyingErrorKey] as? NSError)?.code == Int(EPERM)
+                if denied {
+                    return "Jukebox is not allowed to read \(input). Allow it in System Settings > Privacy & Security > Files and Folders (Removable Volumes), then retry."
+                }
+            }
+        }
+        return "no playable audio found in: \(inputs.joined(separator: ", "))"
     }
 
     func parseTime(_ s: String) -> Double? {
